@@ -7,7 +7,7 @@
 
 
 % ready for submission
-\usepackage{neurips_2024}
+\usepackage[preprint]{neurips_2024}
 
 
 % to compile a preprint version, e.g., for submission to arXiv, add add the
@@ -133,6 +133,8 @@ algorithmic membership inference}. We want to infer whether an algorithm
 is present as a sub-routine
 in another one. 
 
+This work establishes a \textbf{sufficient condition} for algorithm membership inference.
+
 
 
 \section{Background and Related Literature}
@@ -229,6 +231,22 @@ a linear projection, they leverage \textit{strict interchange intervention train
 essentially aligning the intervention effects of the compressed and uncompressed model.
 This is similar in vein to many existing techniques on causal abstraction
 \cite{otsuka_equivalence_2022,zennaro_abstraction_2022,massidda_causal_2023}.
+
+\section{Algorithm Membership Inference}
+
+
+
+\section{Experimental Methods}
+
+
+\subsection{Elliciting different algorithms from the same task}
+To evaluate our methods, we need a way to verifiably ellicit different algorithms
+on the same task. Let us first fix some task. Then, we proceed with the following
+steps:
+\begin{enumerate}[nosep, leftmargin=*]
+\item Using \cite{friedman_learning_2023}, we learn several different Transformer
+programs 
+\end{enumerate}
 
 
 \bibliography{references}
