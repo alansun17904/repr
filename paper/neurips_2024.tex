@@ -35,14 +35,21 @@
 \usepackage{zi4}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{mathtools}
 \usepackage{enumitem}
 
 \bibliographystyle{abbrvnat}
 \renewcommand*{\bibfont}{\footnotesize}
 
+\newtheorem{defn}{Definition}
+\newtheorem{thm}{Theorem}
+\newtheorem{claim}{Claim}
 
-\title{Algorithm Membership Inference}
+% Finding Shared Logic in Blackbox Models with Mechanism Membership Inference
+% 
+
+\title{Are You One of Us? \\ Introducing Mechanism Membership Inference}
 
 
 % The \author macro works with any number of authors. There are two commandsh
@@ -102,38 +109,42 @@
 
 
 \section{Motivation}
+<<<<<<< Updated upstream
 The motivation and scope of our paper:
+=======
+The motivation and scope of our paper is as follow:
+>>>>>>> Stashed changes
 \begin{enumerate}[nosep, label=(\alph*), leftmargin=*]
 \item \textit{What can representation alignment (RSA) tell us about mechanistic alignment?}
-Consider two models $M_A, M_B$. Assume that both the circuit and algorithm of $M_A$
+Consider two models $M_A, M_B$. Assume that both the circuit and mechanism of $M_A$
 is known, but $M_B$ is blackboxed. Let also also assume that there exists an oracle
 that reveals representational alignment of $M_A, M_B$. By intervening on $M_A$ and
 querying this oracle, can we deduce the mechansms of $M_B$?  
 \item \textit{So what?} This may give us much better insight into \textbf{brain-LLM alignment}.
 \item \textit{So what?} From a \textbf{mechanistic intepretability} perspective, such a procedure
-may allow us to perform subcircuit/sub-algorithm membership. For example, if $M_A$ is a
-toy model that implements some algorithm and if $M_B$ is a large model, then
+may allow us to perform subcircuit/sub-mechanism membership. For example, if $M_A$ is a
+toy model that implements some mechanism and if $M_B$ is a large model, then
 deducing membership through representation of alignment between $M_A,M_B$ is much
 more efficient than reverse enginerring $M_B$. 
 \item \textit{So what?} From a \textbf{fairness} perspective, suppose $M_B$ is a large
 sophisticated model that processes job applications. We want to make sure that $M_B$ is not
 discriminating based on race/gender/etc. We can construct a toy model $M_A$ (either through
 \cite{,weiss_thinking_2021,lindner_tracr_2023} or \cite{friedman_learning_2023})
-that exhibits undesirable programs and probe for sub-algorithm membership with $M_B$. 
+that exhibits undesirable programs and probe for sub-mechanism membership with $M_B$. 
 \item \textit{So what?} From an \textbf{safety and alignment} perspective, similar to above
 we can rely on illuminated mechanisms~\cite{lee_mechanistic_2024} to understand if
 language models are implementing alignment in a way that is desirable.
 \item \textit{So what?} Checking membership inference is much more powerful than just
 checking through the potential outcome of the model's outputs. Since once we identify
-the algorithm we have essentially performed counterfactual inference for infinitely many
+the mechanism we have essentially performed counterfactual inference for infinitely many
 examples.
 \end{enumerate}
 Fundamentally, the problem that we are trying to solve is one of \textbf{constrained 
-algorithmic membership inference}. We want to infer whether an algorithm 
+mechanismic membership inference}. We want to infer whether an mechanism 
 is present as a sub-routine
 in another one. 
 
-This work establishes a \textbf{sufficient condition} for algorithm membership inference.
+This work establishes a \textbf{sufficient condition} for mechanism membership inference.
 
 
 
@@ -232,20 +243,72 @@ essentially aligning the intervention effects of the compressed and uncompressed
 This is similar in vein to many existing techniques on causal abstraction
 \cite{otsuka_equivalence_2022,zennaro_abstraction_2022,massidda_causal_2023}.
 
-\section{Algorithm Membership Inference}
+\section{Mechanism Membership Inference}
+We can frame this problem as one of determining causal abstraction or equivalence
+under constraints. A important criteria for determine causal equivalence is the
+consistency of interventions across the two models being compared. 
+This was originally formulated by~\cite{verma_equivalence_2022} and stated
+intuitively as 
+\begin{quote}
+\textit{Two causal models are equivalence if there is no experiment which could
+distinguish one from the other.}
+\end{quote}
+Since this work, there have been several which take different approaches to 
+causal equivalence both in terms of formalism and the actual identification
+algorithm~\citep{beckers_abstracting_2019,otsuka_equivalence_2022,
+zennaro_abstraction_2022,massidda_causal_2023}. These are reviewed in detail
+in the related literature section. However, all of them have been faithful to
+the definition given by \cite{verma_equivalence_2022}. Herein, we take inspiration
+from these approaches as well as the recent advances in mechanistic interpretability
+to define a method for determining mechanism membership. 
+
+In all of the subsequent claims, we assume that model $A$ and $B$ denoted
+as $m_A, m_B$ are neural networks. Moreover, we also assume that there exists
+a surjective correspondance between the computational graph of a neural network
+and the set of causal graphs. Let us also assume that $m_A$ is the whitebox model
+while $m_B$ is the blackbox one. 
+\subsection{Component-Level Intervention}
+\begin{claim}
+Intervention through noising on a single component (node or edge) in $m_A$ results
+in decreased representation alignment. 
+\end{claim}
+\begin{claim}
+Intervention through noising on a single component not in $m_A$ results in no
+change in representational alignment.
+\end{claim}
+
+\subsection{Network-Level Intervention}
+\begin{claim}
+Intervention through noising on a subnetwork of $m_A$ results in decreased representation
+alignment.
+\end{claim}
+\begin{claim}
+Intervention through noising on a subnetwork that is not in $m_A$ results in no change in
+representation alignment.
+\end{claim}
+
+\subsection{System-Level Intervention}
+\begin{claim}
+Say $m_A$ was discovered by patching with distribution $P$, then if we instead patch
+with distribution $Q$ then the change in representation alignment is proportional to
+the transport distance between $P$ and $Q$.
+\end{claim}
 
 
 
 \section{Experimental Methods}
 
 
-\subsection{Elliciting different algorithms from the same task}
-To evaluate our methods, we need a way to verifiably ellicit different algorithms
+\subsection{Elliciting different mechanisms from the same task}
+To evaluate our methods, we need a way to verifiably ellicit different mechanisms
 on the same task. Let us first fix some task. Then, we proceed with the following
 steps:
 \begin{enumerate}[nosep, leftmargin=*]
-\item Using \cite{friedman_learning_2023}, we learn several different Transformer
-programs 
+\item Using \cite{friedman_learning_2023}, we learn several different explicit
+Transformer programs (source of randomness). We can check that they are different
+by looking explicitly at the Transformer programs. 
+\item Using \cite{gupta_interpbench_2024} and \cite{geiger24alignments} to get
+different mechanistic realizations of this abstract Transformer program. 
 \end{enumerate}
 
 
@@ -257,7 +320,7 @@ programs
 
 \section{Appendix / supplemental material}
 
-
+{}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage
@@ -314,8 +377,8 @@ IMPORTANT, please:
         \item The authors are encouraged to create a separate "Limitations" section in their paper.
         \item The paper should point out any strong assumptions and how robust the results are to violations of these assumptions (e.g., independence assumptions, noiseless settings, model well-specification, asymptotic approximations only holding locally). The authors should reflect on how these assumptions might be violated in practice and what the implications would be.
         \item The authors should reflect on the scope of the claims made, e.g., if the approach was only tested on a few datasets or with a few runs. In general, empirical results often depend on implicit assumptions, which should be articulated.
-        \item The authors should reflect on the factors that influence the performance of the approach. For example, a facial recognition algorithm may perform poorly when image resolution is low or images are taken in low lighting. Or a speech-to-text system might not be used reliably to provide closed captions for online lectures because it fails to handle technical jargon.
-        \item The authors should discuss the computational efficiency of the proposed algorithms and how they scale with dataset size.
+        \item The authors should reflect on the factors that influence the performance of the approach. For example, a facial recognition mechanism may perform poorly when image resolution is low or images are taken in low lighting. Or a speech-to-text system might not be used reliably to provide closed captions for online lectures because it fails to handle technical jargon.
+        \item The authors should discuss the computational efficiency of the proposed mechanisms and how they scale with dataset size.
         \item If applicable, the authors should discuss possible limitations of their approach to address problems of privacy and fairness.
         \item While the authors might fear that complete honesty about limitations might be used by reviewers as grounds for rejection, a worse outcome might be that reviewers discover limitations that aren't acknowledged in the paper. The authors should use their best judgment and recognize that individual actions in favor of transparency play an important role in developing norms that preserve the integrity of the community. Reviewers will be specifically instructed to not penalize honesty concerning limitations.
     \end{itemize}
@@ -346,7 +409,7 @@ IMPORTANT, please:
         \item Depending on the contribution, reproducibility can be accomplished in various ways. For example, if the contribution is a novel architecture, describing the architecture fully might suffice, or if the contribution is a specific model and empirical evaluation, it may be necessary to either make it possible for others to replicate the model with the same dataset, or provide access to the model. In general. releasing code and data is often one good way to accomplish this, but reproducibility can also be provided via detailed instructions for how to replicate the results, access to a hosted model (e.g., in the case of a large language model), releasing of a model checkpoint, or other means that are appropriate to the research performed.
         \item While NeurIPS does not require releasing code, the conference does require all submissions to provide some reasonable avenue for reproducibility, which may depend on the nature of the contribution. For example
         \begin{enumerate}
-            \item If the contribution is primarily a new algorithm, the paper should make it clear how to reproduce that algorithm.
+            \item If the contribution is primarily a new mechanism, the paper should make it clear how to reproduce that mechanism.
             \item If the contribution is primarily a new model architecture, the paper should describe the architecture clearly and fully.
             \item If the contribution is a new model (e.g., a large language model), then there should either be a way to access this model for reproducing the results or a way to reproduce the model (e.g., with an open-source dataset or instructions for how to construct the dataset).
             \item We recognize that reproducibility may be tricky in some cases, in which case authors are welcome to describe the particular way they provide for reproducibility. In the case of closed-source models, it may be that access to the model is limited in some way (e.g., to registered users), but it should be possible for other researchers to have some path to reproducing or verifying the results.
@@ -434,7 +497,7 @@ IMPORTANT, please:
         \item Examples of negative societal impacts include potential malicious or unintended uses (e.g., disinformation, generating fake profiles, surveillance), fairness considerations (e.g., deployment of technologies that could make decisions that unfairly impact specific groups), privacy considerations, and security considerations.
         \item The conference expects that many papers will be foundational research and not tied to particular applications, let alone deployments. However, if there is a direct path to any negative applications, the authors should point it out. For example, it is legitimate to point out that an improvement in the quality of generative models could be used to generate deepfakes for disinformation. On the other hand, it is not needed to point out that a generic algorithm for optimizing neural networks could enable people to train models that generate Deepfakes faster.
         \item The authors should consider possible harms that could arise when the technology is being used as intended and functioning correctly, harms that could arise when the technology is being used as intended but gives incorrect results, and harms following from (intentional or unintentional) misuse of the technology.
-        \item If there are negative societal impacts, the authors could also discuss possible mitigation strategies (e.g., gated release of models, providing defenses in addition to attacks, mechanisms for monitoring misuse, mechanisms to monitor how a system learns from feedback over time, improving the efficiency and accessibility of ML).
+        \item If there are negative societal impacts, the authors could also discuss possible mitigation strategies (e.g., gated release of models, providing defenses in addition to attacks, algorithms for monitoring misuse, algorithms to monitor how a system learns from feedback over time, improving the efficiency and accessibility of ML).
     \end{itemize}
     
 \item {\bf Safeguards}
