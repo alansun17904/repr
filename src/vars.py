@@ -15,7 +15,7 @@ def corr_(w1, w2):
     """
     w1_flat = w1.flatten()
     w2_flat = w2.flatten()
-    
+
     w1_centered = w1_flat - torch.mean(w1_flat)
     w2_centered = w2_flat - torch.mean(w2_flat)
 
@@ -24,7 +24,7 @@ def corr_(w1, w2):
 
     std1 = torch.sqrt(torch.sum(w1_centered ** 2) / n)
     std2 = torch.sqrt(torch.sum(w2_centered ** 2) / n)
-    
+
     return covariance / (std1 * std2)
 
 
@@ -40,19 +40,23 @@ def global_corr(p1, p2):
     corrs = []
 
     for k, v in params1.items():
+         if "mask" in k or "IGNORE" in k:
+             continue
          corrs.append(corr_(v, params2[k]))
-    
+
     return sum(corrs) / len(corrs)
 
 
 def main(case_path, case_id, min_id=1, max_id=5):
-    cases = list(filter(lambda x: x.startswith(case_id + "-"), os.listdir(case_path)))
-    
+    cases = list(filter(lambda x: x.startswith(str(case_id) + "-"), os.listdir(case_path)))
+
     d = dict()
+
+    base = Path(case_path)
 
     for i in range(min_id, max_id + 1):
         for j in range(i+ 1, max_id + 1):
-            d[(i,j)] = global_corr(Path(case_path) / cases[i], Path(case_path) / cases[j])
+            d[(i,j)] = global_corr(base / cases[i] / "ll_model_510.pth", base / cases[j] / "ll_model_510.pth")
 
     print(d)
 
