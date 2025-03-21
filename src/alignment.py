@@ -41,44 +41,55 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
         ]))
 
         # compare all of the implementaitons within the same class
-        # same_cls_corr = dict()
-        # for c in tqdm.tqdm(cases):
-        #     same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
+        same_cls_corr = dict()
+        for c in tqdm.tqdm(cases):
+            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
 
-        #     dps = [
-        #         pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
-        #         for v in same_case
-        #     ]
+            dps = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in same_case
+            ]
 
-        #     run_corrs = []
-        #     tot = 0
-        #     for pair in itertools.combinations(dps, 2):
-        #         tot += 1
-        #         run_corrs.append(ridge_fit(pair[0], pair[1]))
+            run_corrs = []
+            tot = 0
+            same_generator = itertools.combinations(dps, 2)
+            while tot < 10:
+                pair = next(same_generator)
+                tot += 1
+                run_corrs.append(ridge_fit(pair[0], pair[1]))
 
-        #     same_cls_corr[int(c)] = sum(run_corrs) / tot
+                same_cls_corr[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
 
-            # pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
+                pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
+
         # compare alignment across different tasks
-
         diff_cases = dict()
         for c in cases:
             same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
             diff_case = list(filter(lambda x: not x.startswith(f"case_{c}"), os.listdir(ROOT)))
             tot = 0
             run_corrs = []
-            cross_generator = itertools.product(same_case, diff_case)
-            while tot < 100:
-                c1_fname, c2_fname = pair
-                c1, c2 = (
-                    pickle.load(open(ROOT / c1_fname, "rb")),
-                    pickle.load(open(ROOT / c2_fname, "rb"))
-                )
-                tot += 1
-                run_corrs.append(ridge_fit(c1.cpu().detach().numpy(), c2.cpu().detach().numpy()))
-            diff_cases[int(c)] = sum(run_corrs) / tot
 
-            pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
+            scs = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in same_case
+            ]
+
+            dcs = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in diff_case
+            ]
+
+            cross_generator = itertools.product(scs, dcs)
+            with tqdm.tqdm(total=10) as pbar:
+                while tot < 10:
+                    pair = next(cross_generator)
+                    c1, c2 = pair
+                    tot += 1
+                    run_corrs.append(ridge_fit(c1, c2))
+                    pbar.update(1)
+                diff_cases[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
+                pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
 
         sys.exit(0)
 
