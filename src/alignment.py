@@ -1,5 +1,7 @@
+import os
 import re
 import sys
+import tqdm
 import fire
 import torch
 import pickle
@@ -11,7 +13,7 @@ from transformer_lens import HookedTransformer
 from circuits_benchmark.utils.get_cases import get_cases
 
 
-CFG_PATH = "ll_model_cfg_510.pkl" 
+CFG_PATH = "ll_model_cfg_510.pkl"
 
 
 def ridge_fit(X, Y):
@@ -32,52 +34,52 @@ def patch_head(dst, hook, src, head_index):
 def main(case_id, model_id, out_name, batch_size=256, intervene=False):
 
     if not intervene:
-        
-        ROOT = Path("data/reprs/")
+        print("Not using arguments: case_id, model_id, batch_size")
+        ROOT = Path("src/data/reprs/")
         cases = list(set([
-            re.search(r"\d+", f_name) for f_name in os.listdir()
+            re.search(r"\d+", f_name).group(0) for f_name in os.listdir(ROOT)
         ]))
 
         # compare all of the implementaitons within the same class
         same_cls_corr = dict()
-        for c in case:
-            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir()))
-            run_corrs = [] 
+        for c in tqdm.tqdm(cases):
+            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
+
+            dps = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in same_case
+            ]
+
+            run_corrs = []
             tot = 0
-            for pair in itertools.combinations(same_case, 2):
-                c1_fname, c2_fname = pair
-                c1, c2 = (
-                    pickle.load(open(c1_fname, "rb")),
-                    pickle.load(open(c2_fname, "rb"))
-                )
+            for pair in itertools.combinations(dps, 2):
                 tot += 1
-                run_corrs.append(ridge_fit(c1, c2))
+                run_corrs.append(ridge_fit(pair[0], pair[1]))
 
             same_cls_corr[int(c)] = sum(run_corrs) / tot
 
-        pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "Wb"))
+            pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
         # compare alignment across different tasks
         diff_cases = dict()
-        for c in case:
-            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir()))
-            diff_case = list(filter(lambda x: not x.startswith(f"case_{c}"), os.listdir()))
+        for c in cases:
+            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
+            diff_case = list(filter(lambda x: not x.startswith(f"case_{c}"), os.listdir(ROOT)))
             tot = 0
             run_corrs = []
             cross_generator = itertools.product(same_case, diff_case)
             while tot < 100:
                 c1_fname, c2_fname = pair
                 c1, c2 = (
-                    pickle.load(open(c1_fname, "rb")),
-                    pickle.load(open(c2_fname, "rb"))
+                    pickle.load(open(ROOT / c1_fname, "rb")),
+                    pickle.load(open(ROOT / c2_fname, "rb"))
                 )
                 tot += 1
-                run_corrs.append(ridge_fit(c1, c2))
+                run_corrs.append(ridge_fit(c1.cpu().detach().numpy(), c2.cpu().detach().numpy()))
             diff_cases[int(c)] = sum(run_corrs) / tot
 
         pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
 
         sys.exit(0)
-
 
 
     cases = get_cases()
@@ -89,7 +91,7 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
 
     tf.load_state_dict(torch.load(model_path))
 
-    
+
 
     # get the clean data (exactly 200 samples)
     clean_data = case.get_clean_data(min_samples=200, max_samples=200)
@@ -105,7 +107,7 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
         else:
             resid = torch.cat([resids, resid], dim=1)
         del cache
-    
+
     flats = resids.permute(1, 0, 2, 3).flatten(start_dim=1)
 
     pickle.dump(flats, open(out_name, "wb"))
