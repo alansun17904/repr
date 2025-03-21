@@ -11,11 +11,10 @@ ROOT = Path("")
 
 CFG_PATH = ROOT / "ll_model_cfg_510.pkl"
 
-
 def main(case_id, model_id, out_name, batch_size=256):
 
     cases = get_cases()
-    case = [c for c in cases if c.__class__.__name__[:4] in str(case_id)][0]
+    case = [c for c in cases if c.__class__.__name__[4:] in str(case_id)][0]
 
     tf = HookedTransformer(pickle.load(open(CFG_PATH, "rb")))
 
@@ -23,7 +22,7 @@ def main(case_id, model_id, out_name, batch_size=256):
 
     tf.load_state_dict(torch.load(model_path))
 
-    # get the clean data
+    # get the clean data (exactly 200 samples)
     clean_data = case.get_clean_data(min_samples=200, max_samples=200)
     print("Probing", len(clean_data), "examples.")
     loader = clean_data.make_loader(batch_size=batch_size)
