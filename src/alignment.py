@@ -41,25 +41,26 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
         ]))
 
         # compare all of the implementaitons within the same class
-        same_cls_corr = dict()
-        for c in tqdm.tqdm(cases):
-            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
+        # same_cls_corr = dict()
+        # for c in tqdm.tqdm(cases):
+        #     same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
 
-            dps = [
-                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
-                for v in same_case
-            ]
+        #     dps = [
+        #         pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+        #         for v in same_case
+        #     ]
 
-            run_corrs = []
-            tot = 0
-            for pair in itertools.combinations(dps, 2):
-                tot += 1
-                run_corrs.append(ridge_fit(pair[0], pair[1]))
+        #     run_corrs = []
+        #     tot = 0
+        #     for pair in itertools.combinations(dps, 2):
+        #         tot += 1
+        #         run_corrs.append(ridge_fit(pair[0], pair[1]))
 
-            same_cls_corr[int(c)] = sum(run_corrs) / tot
+        #     same_cls_corr[int(c)] = sum(run_corrs) / tot
 
-            pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
+            # pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
         # compare alignment across different tasks
+
         diff_cases = dict()
         for c in cases:
             same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
@@ -77,7 +78,7 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
                 run_corrs.append(ridge_fit(c1.cpu().detach().numpy(), c2.cpu().detach().numpy()))
             diff_cases[int(c)] = sum(run_corrs) / tot
 
-        pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
+            pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
 
         sys.exit(0)
 
