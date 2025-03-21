@@ -67,17 +67,24 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
             diff_case = list(filter(lambda x: not x.startswith(f"case_{c}"), os.listdir(ROOT)))
             tot = 0
             run_corrs = []
-            cross_generator = itertools.product(same_case, diff_case)
-            while tot < 100:
-                c1_fname, c2_fname = pair
-                c1, c2 = (
-                    pickle.load(open(ROOT / c1_fname, "rb")),
-                    pickle.load(open(ROOT / c2_fname, "rb"))
-                )
-                tot += 1
-                run_corrs.append(ridge_fit(c1.cpu().detach().numpy(), c2.cpu().detach().numpy()))
-            diff_cases[int(c)] = sum(run_corrs) / tot
 
+            scs = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in same_case
+            ]
+
+            dcs = [
+                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
+                for v in diff_case
+            ]
+
+            cross_generator = itertools.product(scs, dcs)
+            while tot < 100:
+                pair = next(cross_generator)
+                c1, c2 = pair
+                tot += 1
+                run_corrs.append(ridge_fit(c1, c2))
+            diff_cases[int(c)] = sum(run_corrs) / tot
             pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
 
         sys.exit(0)
