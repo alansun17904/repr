@@ -31,7 +31,7 @@ def main(case_id, model_id, out_name, batch_size=256):
     clean_data = case.get_clean_data(min_samples=200, max_samples=200)
     print("Probing", len(clean_data), "examples.")
     loader = clean_data.make_loader(batch_size=batch_size)
-    resids = []
+    resids = None
     for x, _ in loader:
         _, cache = tf.run_with_cache(x)
         resid = cache.accumulated_resid()
