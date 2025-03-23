@@ -1,3 +1,7 @@
+# data files
+*.pkl
+src/data/
+
 InterpBench/
 .DS_Store
 
