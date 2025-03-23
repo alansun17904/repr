@@ -1,3 +1,4 @@
+import os
 import fire
 import torch
 import pickle
@@ -17,6 +18,10 @@ def main(case_id, model_id, out_name, batch_size=256):
     case = [c for c in cases if c.__class__.__name__[4:] in str(case_id)][0]
 
     tf = HookedTransformer(pickle.load(open(CFG_PATH, "rb")))
+    case_model_dir = ROOT / f"{case_id}-{model_id}"
+
+    if not os.path.exists(case_model_dir):
+        sys.exit(1)
 
     model_path = ROOT / f"{case_id}-{model_id}" / "ll_model_510.pth"
 
