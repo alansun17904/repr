@@ -22,51 +22,63 @@ def ridge_fit(X, Y):
     return rcv.score(X, Y)
 
 
-def patch_head(dst, hook, src, head_index):
-    """Patching the output of an attention head before the final OV
-    computation. `dst` has dimension (batch, sq_len, nhead, d_head)
-    `src` has the same dimension. And hook is just a hook point.
-    """
-    dst[:, :, head_inex, :] = src[:, :, head_inex, :]
-    return dst
-
-
 def main(case_id, model_id, out_name, batch_size=256, intervene=False):
 
     if not intervene:
         print("Not using arguments: case_id, model_id, batch_size")
         ROOT = Path("src/data/reprs/")
-        cases = list(set([
-            re.search(r"\d+", f_name).group(0) for f_name in os.listdir(ROOT)
-        ]))
+        files = os.listdir(ROOT)
+        
+        cases = set()
+
+        for f_name in files:
+            case_id = re.search(r"var_case_(\d+)", f_name)
+            if case_id is not None:
+                cases.add(case_id.group(1))
+
+        cases = list(cases)
+
+        print(cases)
 
         # compare all of the implementaitons within the same class
         same_cls_corr = dict()
         for c in tqdm.tqdm(cases):
-            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
+            same_case = list(filter(lambda x: x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
 
             dps = [
                 pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
                 for v in same_case
             ]
 
+            print(f"Found {len(dps)} of the same case.")
+
             run_corrs = []
             tot = 0
+
             same_generator = itertools.combinations(dps, 2)
             while tot < 10:
-                pair = next(same_generator)
+                try:
+                    pair = next(same_generator)
+                except StopIteration:
+                    break
                 tot += 1
+
+                if np.isnan(pair[0]).any() or np.isnan(pair[1]).any():
+                    print("There exists NaNs in [0] or [1] of pair, so skipping!")
+                    continue
+
                 run_corrs.append(ridge_fit(pair[0], pair[1]))
 
-                same_cls_corr[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
+                if len(run_corrs) != 0:
+                    same_cls_corr[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
 
                 pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
 
         # compare alignment across different tasks
         diff_cases = dict()
         for c in cases:
-            same_case = list(filter(lambda x: x.startswith(f"case_{c}"), os.listdir(ROOT)))
-            diff_case = list(filter(lambda x: not x.startswith(f"case_{c}"), os.listdir(ROOT)))
+            same_case = list(filter(lambda x: x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
+            diff_case = list(filter(lambda x: not x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
             tot = 0
             run_corrs = []
 
@@ -83,8 +95,16 @@ def main(case_id, model_id, out_name, batch_size=256, intervene=False):
             cross_generator = itertools.product(scs, dcs)
             with tqdm.tqdm(total=10) as pbar:
                 while tot < 10:
-                    pair = next(cross_generator)
+                    try:
+                        pair = next(cross_generator)
+                    except StopIteration:
+                        break
                     c1, c2 = pair
+
+                    if np.isnan(c1).any() or np.isnan(c2).any():
+                        print("There exists NaNs in [0] or [1] of pair, so skipping!")
+                        continue
+
                     tot += 1
                     run_corrs.append(ridge_fit(c1, c2))
                     pbar.update(1)
