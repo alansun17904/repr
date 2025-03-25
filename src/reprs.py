@@ -27,7 +27,7 @@ def patch_head(dst, hook, src, index):
     return dst
 
 
-def setup(case_id, model_id):
+def setup(case_id, model_id, batch_size):
     cases = get_cases()
     case = [c for c in cases if c.get_name() == str(case_id)][0]
 
@@ -88,7 +88,7 @@ def main(case_id, model_id, out_name, batch_size=64, intervene=False, n_nodes=1,
             within the circuit, or those outside of the circuit. If this is true,
             then we are sampling n_nodes from within the circuit to intervene on.
     """
-    case, tf, clean_data, loader = setup(case_id, model_id)
+    case, tf, clean_data, loader = setup(case_id, model_id, batch_size)
 
     if not intervene:
         reprs = get_reprs(tf, loader)
