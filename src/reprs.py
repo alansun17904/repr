@@ -16,6 +16,8 @@ from circuits_benchmark.utils.get_cases import get_cases
 ROOT = Path("../circuits-benchmark/results/var_ll_models")
 
 CFG_PATH = "ll_model_cfg_510.pkl"
+CASE_PATH = "admissible_tasks.pkl"
+CASES = ...
 
 
 def patch_head(dst, hook, src, index):

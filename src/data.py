@@ -3,7 +3,7 @@ such that all of the data points within the dataset share the same vocabulary.
 """
 
 import pickle
-from circuits_benchmark.benchmark.tracr_dataset import TracrDataset
 
 
-def get_clean_data(case_id: int, samples: int):
+def get_clean_data(case, samples: int):
+	return case.get_clean_data(min_samples=samples, max_samples=samples)
