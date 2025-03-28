@@ -25,11 +25,11 @@ if __name__ == "__main__":
   # get the admissible cases
   admissible = pickle.load(open("admissible_tasks.pkl", "rb"))
 
-  for case in admissible:
+  for case in admissible.values():
     print(f"Training against Case {case.get_name()}")
     for seed in range(0, 10):
       args.seed = seed
-      args.indices= [case.get_name()]
+      args.indices= case.get_name()
       args.output_dir = str(Path(args.output_dir) / f"c{case.get_name()}-s{seed}")
       if args.command == "run":
         run_algorithm.run(args)
@@ -37,3 +37,4 @@ if __name__ == "__main__":
         train.run(args)
       elif args.command == "eval":
         evaluation.run(args)
+      sys.exit(1)
