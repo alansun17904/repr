@@ -151,6 +151,10 @@ def main(exp_dir, out_dir, batch_size=64, eval=False, intervene=False, n_nodes=1
             hl_model = cases[case].get_hl_model()
             for seed in seeds:
                 model, _ = load_model(exp_dir / f"c{case}-s{seed}")
+
+                if model.cfg.n_ctx != 10:
+                    continue
+
                 clean_acc = eval_model(model, hl_model, clean_ds)
                 corr_acc = eval_model(model, hl_model, corrupt_ds)
 

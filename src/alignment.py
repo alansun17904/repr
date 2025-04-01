@@ -56,7 +56,7 @@ def main(dir_name, out_name, n_comps=10, batch_size=256, intervene=False, baseli
             case1 = _cases[k1]
             c1 = random.choices(case2seed[case1], k=n_comps)
             c1_reprs = [
-                open(dir_name / f"c{case1}-s{s1}-reprs.pkl", "rb")
+                pickle.load(open(dir_name / f"c{case1}-s{s1}-reprs.pkl", "rb")).cpu().detach().numpy()
                 for s1 in c1
             ]
 
@@ -64,7 +64,7 @@ def main(dir_name, out_name, n_comps=10, batch_size=256, intervene=False, baseli
                 case2 = _cases[k2]
                 c2 = random.choices(case2seed[case2], k=n_comps)
                 c2_reprs = [
-                    open(dir_name / f"c{case2}-s{s2}-reprs.pkl", "rb")
+                    pickle.load(open(dir_name / f"c{case2}-s{s2}-reprs.pkl", "rb")).cpu().detach().numpy()
                     for s2 in c2
                 ]
 
