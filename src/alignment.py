@@ -5,6 +5,7 @@ import tqdm
 import fire
 import torch
 import pickle
+import random
 import itertools
 import numpy as np
 from pathlib import Path
@@ -14,6 +15,7 @@ from circuits_benchmark.utils.get_cases import get_cases
 
 
 CFG_PATH = "ll_model_cfg_510.pkl"
+EVAL_PATH = "eval-accuracy.pkl"
 
 
 def ridge_fit(X, Y):
@@ -22,95 +24,54 @@ def ridge_fit(X, Y):
     return rcv.score(X, Y)
 
 
-def main(case_id, model_id, out_name, batch_size=256, intervene=False):
+def main(dir_name, out_name, n_comps=10, batch_size=256, intervene=False, baseline_acc=0.8):
+
+    # check to see if the evaluation map exists
+    dir_name = Path(dir_name)
+    if not os.path.exists(dir_name / EVAL_PATH):
+        raise ValueError(f"Evaluation map `{str(dir_name)} / eval-accuracy.pkl` does not exist")
+
+    evalu = pickle.load(open(dir_name / EVAL_PATH, "rb"))
+    # get all of the case-seed pairs that are above baseline_acc
+    
+    case_seeds = list(filter(lambda x: x[1][0] >= baseline_acc, evalu.items()))
+    case_seeds = [v[0] for v in case_seeds] 
+
+    case2seed = dict()
+    for cs in case_seeds:
+        if cs[0] not in case2seed:
+            case2seed[cs[0]] = [cs[1]]
+        else:
+            case2seed[cs[0]].append(cs[1])
 
     if not intervene:
-        print("Not using arguments: case_id, model_id, batch_size")
-        ROOT = Path("src/data/reprs/")
-        files = os.listdir(ROOT)
-        
-        cases = set()
 
-        for f_name in files:
-            case_id = re.search(r"var_case_(\d+)", f_name)
-            if case_id is not None:
-                cases.add(case_id.group(1))
+        case2alignment = dict()
+        _cases = list(case2seed.keys())
+        _len = len(case2seed)
 
-        cases = list(cases)
+        pbar = tqdm.tqdm(total=_len * (_len - 1))
 
-        print(cases)
-
-        # compare all of the implementaitons within the same class
-        same_cls_corr = dict()
-        for c in tqdm.tqdm(cases):
-            same_case = list(filter(lambda x: x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
-
-            dps = [
-                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
-                for v in same_case
+        for k1 in range(len(case2seed.items())):
+            case1 = _cases[k1]
+            c1 = random.choices(case2seed[case1], k=n_comps)
+            c1_reprs = [
+                open(dir_name / f"c{case1}-s{s1}-reprs.pkl", "rb")
+                for s1 in c1
             ]
 
-            print(f"Found {len(dps)} of the same case.")
+            for k2 in range(k1, len(case2seed.items())):
+                case2 = _cases[k2]
+                c2 = random.choices(case2seed[case2], k=n_comps)
+                c2_reprs = [
+                    open(dir_name / f"c{case2}-s{s2}-reprs.pkl", "rb")
+                    for s2 in c2
+                ]
 
-            run_corrs = []
-            tot = 0
+                case2alignment[(_cases[k1], _cases[k2])] = [ridge_fit(c1_reprs[i], c2_reprs[i]) for i in range(n_comps)]
+                pbar.update(1)
 
-            same_generator = itertools.combinations(dps, 2)
-            while tot < 10:
-                try:
-                    pair = next(same_generator)
-                except StopIteration:
-                    break
-                tot += 1
-
-                if np.isnan(pair[0]).any() or np.isnan(pair[1]).any():
-                    print("There exists NaNs in [0] or [1] of pair, so skipping!")
-                    continue
-
-                run_corrs.append(ridge_fit(pair[0], pair[1]))
-
-                if len(run_corrs) != 0:
-                    same_cls_corr[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
-
-                pickle.dump(same_cls_corr, open(f"{out_name}_same.pkl", "wb"))
-
-        # compare alignment across different tasks
-        diff_cases = dict()
-        for c in cases:
-            same_case = list(filter(lambda x: x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
-            diff_case = list(filter(lambda x: not x.startswith(f"var_case_{c}"), os.listdir(ROOT)))
-            tot = 0
-            run_corrs = []
-
-            scs = [
-                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
-                for v in same_case
-            ]
-
-            dcs = [
-                pickle.load(open(ROOT / v, "rb")).cpu().detach().numpy()
-                for v in diff_case
-            ]
-
-            cross_generator = itertools.product(scs, dcs)
-            with tqdm.tqdm(total=10) as pbar:
-                while tot < 10:
-                    try:
-                        pair = next(cross_generator)
-                    except StopIteration:
-                        break
-                    c1, c2 = pair
-
-                    if np.isnan(c1).any() or np.isnan(c2).any():
-                        print("There exists NaNs in [0] or [1] of pair, so skipping!")
-                        continue
-
-                    tot += 1
-                    run_corrs.append(ridge_fit(c1, c2))
-                    pbar.update(1)
-                diff_cases[int(c)] = (sum(run_corrs) / tot, np.std(run_corrs))
-                pickle.dump(diff_cases, open(f"{out_name}_diff.pkl", "wb"))
-
+            pickle.dump(case2alignment, open(f"{out_name}", "wb"))
         sys.exit(0)
 
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
-for i in {1..40}; do
-    for seed in {1..10}; do
-        python3 src/reprs.py --case_id $i --model_id $seed --out_name src/data/reprs/mid_case_${i}_model_${seed}.pkl
-    done
-done
+python src/reprs.py src/data/constant-ll-models src/data/reprs/constant-ll-models
+python src/reprs.py src/data/corr-ll-models src/data/reprs/corr-ll-models
+python src/reprs.py src/data/arch-ll-models src/data/reprs/arch-ll-models
+python src/reprs.py src/data/corr-arch-ll-models src/data/reprs/corr-arch-ll-models
